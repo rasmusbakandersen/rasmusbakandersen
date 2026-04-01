@@ -14,8 +14,6 @@ Traefik is the ingress controller with cert-manager handling Let's Encrypt certi
 
 ### Security
 
-This is the part I've spent the most time on.
-
 **Wazuh** is the backbone of the security stack, serving as both SIEM and SOAR. It collects and correlates logs from every host — authentication events, file integrity changes (via AIDE), and Suricata IDS alerts forwarded from pfSense over syslog. Active response rules automatically block IPs, kill processes, or trigger alerts based on correlation logic.
 
 Wazuh also runs SCA modules that continuously scan all hosts against CIS benchmarks, currently scoring 56–78% depending on host role, with ongoing remediation targeting 80%+. The manager runs bare-metal on the control plane node with agents deployed to every host in the fleet.
