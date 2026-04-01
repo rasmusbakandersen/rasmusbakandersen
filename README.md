@@ -24,6 +24,8 @@ Wazuh also runs SCA modules that continuously scan all hosts against CIS benchma
 
 **TruffleHog** runs as a K8s CronJob every Sunday. It pulls a list of all repos from the Gitea API, clones each one, and scans the full git history for leaked secrets. Results go to ntfy.
 
+**Container Hardening**. All containers — both K3s and Docker — run with `cap_drop: ALL`, `no-new-privileges: true`, `read_only` root filesystems where possible, and explicit resource limits (CPU and memory). This limits blast radius in case of a container escape and ensures no service can silently consume host resources.
+
 All VMs are provisioned with **CIS-aligned hardening** baked into the cloud-init template — disabled unused kernel modules, restricted sysctl parameters, SSH hardened (no root login, strong ciphers only, limited auth tries), auditd rules for identity and sudoers changes, AIDE file integrity, and firewalld with default deny.
 
 ### Monitoring
