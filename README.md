@@ -8,17 +8,15 @@ Self-hosted environment running 25+ services across a K3s cluster and a Docker h
 
 The K3s cluster runs on three nodes — one control plane, two workers — all on Fedora Server VMs. ArgoCD watches a private Gitea repo and syncs every manifest automatically. No manual `kubectl apply`, ever. If something drifts, ArgoCD corrects it.
 
-All secrets are handled with Bitnami Sealed Secrets. The encrypted blobs live in Git, and only the cluster can decrypt them. The Sealed Secrets master key is backed up to NFS — losing it would mean re-sealing everything.
+Secrets are managed differently depending on the layer. In Kubernetes, all secrets use Bitnami Sealed Secrets — the encrypted blobs live in Git and only the cluster can decrypt them. Docker services pull secrets from `.env` files excluded from version control. Terraform uses sensitive variables loaded from `.tfvars` files that are git-ignored. Nothing sensitive is committed in plaintext anywhere.
 
-Longhorn handles persistent storage with single-replica volumes, hourly and daily snapshots, and automatic scheduling across nodes. Velero runs a daily backup of all cluster resources to a MinIO S3 bucket running in-cluster.
-
-Traefik is the ingress controller with cert-manager handling Let's Encrypt certificates via Cloudflare DNS-01 challenges. Every exposed service gets TLS automatically.
+Traefik is the ingress controller with cert-manager handling Let's Encrypt certificates via Cloudflare DNS-01 challenges. Every exposed service gets TLS automatically. Velero runs daily cluster backups to a MinIO S3 bucket running in-cluster.
 
 ### Security
 
 This is the part I've spent the most time on.
 
-**Wazuh** runs as a full SIEM — the manager sits bare-metal on the control plane node, with agents deployed to every host in the fleet. It collects file integrity monitoring events, authentication logs, and integrates with Suricata on pfSense via syslog. CIS benchmark scans run against all hosts and currently score between 56–78% depending on the host role.
+**Wazuh** is the backbone of the security stack. It runs as a SIEM collecting and correlating logs from every host — authentication events, file integrity monitoring, and Suricata IDS alerts forwarded from pfSense via syslog. Beyond log analysis, it also functions as a SOAR platform with active response rules that can automatically block IPs, kill processes, or trigger alerts based on correlation rules. On top of that, Wazuh runs SCA (Security Configuration Assessment) modules that continuously scan all hosts against CIS benchmarks — currently scoring between 56–78% depending on the host role. The manager runs bare-metal on the control plane node with agents deployed to every host in the fleet.
 
 **CrowdSec** runs on the Docker host, parsing Caddy access logs and SSH auth logs. It pulls shared threat intelligence and automatically bans IPs matching known attack patterns. An n8n workflow checks active CrowdSec decisions every hour and sends a summary to ntfy.
 
@@ -30,7 +28,7 @@ All VMs are provisioned with **CIS-aligned hardening** baked into the cloud-init
 
 ### Monitoring
 
-Prometheus scrapes node-exporter and cAdvisor across all hosts. Loki collects logs from Promtail DaemonSets on every K3s node, plus a Promtail container on the Docker host shipping system, journal, and container logs. Grafana ties it all together.
+Grafana is the central dashboard for everything. It pulls metrics from Prometheus, which scrapes node-exporter and cAdvisor across all hosts, and queries logs from Loki, which collects from Promtail DaemonSets on every K3s node plus a Promtail container on the Docker host shipping system, journal, and container logs.
 
 n8n is where a lot of the operational glue lives. It runs daily log analysis across both K3s pods and Docker containers (via Ansible playbooks over SSH), condenses error logs with Ollama (Gemma 3 12B running locally), and pushes readable summaries to ntfy. There's also a weekly health report that pulls Prometheus metrics, disk/SMART data, Docker bloat stats, and K3s cluster health into one notification.
 
@@ -42,18 +40,18 @@ Caddy on the Docker host acts as the external reverse proxy. Every service goes 
 
 ### Infrastructure as Code
 
-Terraform provisions VMs on Proxmox using the bpg/proxmox provider. The cloud-init template is a standalone CIS-hardened Fedora config that gets injected via `templatefile()`. One `terraform apply` gives you a fully hardened VM with SSH keys, firewalld, SELinux enforcing, auditd, and AIDE — ready for Ansible to take over.
+Terraform provisions VMs on Proxmox using the bpg/proxmox provider. Each VM is cloned from a Fedora Cloud template and gets a CIS-hardened cloud-init config injected at creation — SSH lockdown, SELinux enforcing, auditd, AIDE, and firewalld all configured before the VM even boots.
 
 Ansible handles ongoing state — fleet-wide package updates, kernel hardening enforcement, Docker daemon config, service management, and cleanup jobs. Playbooks also power the n8n workflows (SSH failures, CrowdSec checks, log scanning, Trivy results).
 
 ### Backup Strategy
 
-Four layers: Longhorn snapshots (hourly + daily retention) for K3s volumes, Velero daily backups to MinIO for cluster resources, Kopia for Docker bind mounts to NAS, and Proxmox vzdump for full VM backups. Each layer covers a different failure scenario.
+Four layers: Longhorn snapshots (hourly + daily) for K3s volumes, Velero daily backups to MinIO for cluster resources, Kopia for Docker bind mounts to NAS, and Proxmox vzdump for full VM backups. Each layer covers a different failure scenario.
 
 ## Repositories
 
 | Repository | What's in it |
 |---|---|
-| **[Kubernetes](https://github.com/rasmusbakandersen/Kubernetes)** | Every K3s manifest — app deployments, ArgoCD applications, Sealed Secrets, Longhorn/Velero/Traefik infra, monitoring stack, Trivy Operator, TruffleHog CronJob. |
+| **[Kubernetes](https://github.com/rasmusbakandersen/Kubernetes)** | Every K3s manifest — app deployments, ArgoCD applications, Sealed Secrets, Velero/Traefik infra, monitoring stack, Trivy Operator, TruffleHog CronJob. |
 | **[Docker](https://github.com/rasmusbakandersen/Docker)** | Compose stacks for the Docker host — Caddy + Authelia forward auth, CrowdSec, Gitea, Kopia, monitoring agents, Watchtower, and Printarr (a custom print/scan web app I built). |
 | **[Automation](https://github.com/rasmusbakandersen/Automation)** | Ansible playbooks for hardening, updates, log scanning, NUT UPS deployment. Terraform configs for Proxmox VM provisioning. Operational scripts and PowerShell tooling. |
