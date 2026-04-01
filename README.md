@@ -1,14 +1,14 @@
 # Homelab Infrastructure
 
-Self-hosted environment running 25+ services across a K3s cluster and a Docker host on three Proxmox hypervisors. Everything is managed through GitOps, backed by proper security tooling, and monitored end to end.
+Production-grade self-hosted platform running 25+ services across a three-node K3s cluster and a dedicated Docker host, built on three Proxmox hypervisors. The entire stack is GitOps-driven via ArgoCD, secured with a full SIEM/IDS pipeline, and monitored through Prometheus, Loki, and Grafana. Built as a hands-on complement to my professional work in cloud infrastructure — every design choice reflects real-world patterns I'd apply at scale.
 
-## What's Running
+## Platform Overview
 
 ### GitOps & Kubernetes
 
 The K3s cluster runs on three nodes — one control plane, two workers — all on Fedora Server VMs. ArgoCD watches a private Gitea repo and syncs every manifest automatically. No manual `kubectl apply`, ever. If something drifts, ArgoCD corrects it.
 
-Secrets are managed differently depending on the layer. In Kubernetes, all secrets use Bitnami Sealed Secrets — the encrypted blobs live in Git and only the cluster can decrypt them. Docker services pull secrets from `.env` files excluded from version control. Terraform uses sensitive variables loaded from `.tfvars` files that are git-ignored. Nothing sensitive is committed in plaintext anywhere.
+Secrets are handled per-layer: Kubernetes uses Bitnami Sealed Secrets with encrypted blobs committed to Git — only the cluster can decrypt them. Docker services pull from `.env` files excluded from version control. Terraform loads sensitive variables from git-ignored `.tfvars` files. Nothing sensitive is committed in plaintext.
 
 Traefik is the ingress controller with cert-manager handling Let's Encrypt certificates via Cloudflare DNS-01 challenges. Every exposed service gets TLS automatically. Velero runs daily cluster backups to a MinIO S3 bucket running in-cluster.
 
@@ -16,7 +16,9 @@ Traefik is the ingress controller with cert-manager handling Let's Encrypt certi
 
 This is the part I've spent the most time on.
 
-**Wazuh** is the backbone of the security stack. It runs as a SIEM collecting and correlating logs from every host — authentication events, file integrity monitoring, and Suricata IDS alerts forwarded from pfSense via syslog. Beyond log analysis, it also functions as a SOAR platform with active response rules that can automatically block IPs, kill processes, or trigger alerts based on correlation rules. On top of that, Wazuh runs SCA (Security Configuration Assessment) modules that continuously scan all hosts against CIS benchmarks — currently scoring between 56–78% depending on the host role. The manager runs bare-metal on the control plane node with agents deployed to every host in the fleet.
+**Wazuh** is the backbone of the security stack, serving as both SIEM and SOAR. It collects and correlates logs from every host — authentication events, file integrity changes (via AIDE), and Suricata IDS alerts forwarded from pfSense over syslog. Active response rules automatically block IPs, kill processes, or trigger alerts based on correlation logic.
+
+Wazuh also runs SCA modules that continuously scan all hosts against CIS benchmarks, currently scoring 56–78% depending on host role, with ongoing remediation targeting 80%+. The manager runs bare-metal on the control plane node with agents deployed to every host in the fleet.
 
 **CrowdSec** runs on the Docker host, parsing Caddy access logs and SSH auth logs. It pulls shared threat intelligence and automatically bans IPs matching known attack patterns. An n8n workflow checks active CrowdSec decisions every hour and sends a summary to ntfy.
 
@@ -34,7 +36,7 @@ n8n is where a lot of the operational glue lives. It runs daily log analysis acr
 
 ### Networking
 
-pfSense handles routing and firewalling. The trusted server VLAN (86) is separate from IoT/guest traffic (VLAN 87). Pi-hole with Unbound provides recursive DNS — no upstream DNS forwarding. Suricata runs on pfSense as an IDS with logs forwarded to Wazuh.
+pfSense handles routing and firewalling. The network is segmented following least-privilege principles — the trusted server VLAN (86) is isolated from IoT and guest traffic (VLAN 87), with firewall rules restricting inter-VLAN communication to only what's explicitly needed. Pi-hole with Unbound provides recursive DNS — no upstream DNS forwarding.
 
 Caddy on the Docker host acts as the external reverse proxy. Every service goes through Authelia for SSO via forward auth, with bypass rules only for apps that need their own mobile auth (Immich, ntfy). Tailscale provides remote access without exposing anything to the public internet.
 
@@ -46,7 +48,8 @@ Ansible handles ongoing state — fleet-wide package updates, kernel hardening e
 
 ### Backup Strategy
 
-Four layers: Longhorn snapshots (hourly + daily) for K3s volumes, Velero daily backups to MinIO for cluster resources, Kopia for Docker bind mounts to NAS, and Proxmox vzdump for full VM backups. Each layer covers a different failure scenario.
+Four layers, each covering a different failure scenario: Longhorn snapshots (hourly + daily) for K3s volumes, Velero daily backups to MinIO for full cluster resources, Kopia for Docker bind mounts to NAS, and Proxmox vzdump for VM-level recovery. Restores have been tested — including full Velero cluster recovery and Kopia file-level restores — to verify the chain actually works end to end.
+
 
 ## Repositories
 
