@@ -1,6 +1,6 @@
 # Homelab Infrastructure
 
-I self host  30+ services across a three-node Kubernetes cluster and a dedicated Docker host, built on four Proxmox hypervisors. The entire Kubernetes stack is GitOps driven via ArgoCD, secured with a full SIEM/SOAR pipeline, and monitored through Prometheus, Loki, and Grafana. Built as a hands-on complement to my professional work in cloud infrastructure - and to be less dependent on big tech.
+I self host  30+ services across a three-node Kubernetes cluster and a dedicated Docker host, built on four Proxmox hypervisors. The entire Kubernetes stack is GitOps driven via ArgoCD, secured with a full SIEM/SOAR pipeline, and monitored through Prometheus and Grafana. Built as a hands-on complement to my professional work in cloud infrastructure - and to be less dependent on big tech.
 
 ## Platform Overview
 
