@@ -1,16 +1,16 @@
 # Homelab Infrastructure
 
-Production-grade self-hosted platform running 25+ services across a three-node K3s cluster and a dedicated Docker host, built on three Proxmox hypervisors. The entire stack is GitOps-driven via ArgoCD, secured with a full SIEM/IDS pipeline, and monitored through Prometheus, Loki, and Grafana. Built as a hands-on complement to my professional work in cloud infrastructure — every design choice reflects real-world patterns I'd apply at scale.
+I self host  30+ services across a three-node Kubernetes cluster and a dedicated Docker host, built on four Proxmox hypervisors. The entire Kubernetes stack is GitOps driven via ArgoCD, secured with a full SIEM/SOAR pipeline, and monitored through Prometheus, Loki, and Grafana. Built as a hands-on complement to my professional work in cloud infrastructure - and to be less dependent on big tech.
 
 ## Platform Overview
 
 ### GitOps & Kubernetes
 
-The K3s cluster runs on three nodes — one control plane, two workers — all on Fedora Server VMs. ArgoCD watches a private Gitea repo and syncs every manifest automatically. No manual `kubectl apply`, ever. If something drifts, ArgoCD corrects it.
+The Kubernetes cluster runs on three nodes, one control plane and two workers - all on Fedora Server VMs. ArgoCD watches a Gitea repo and syncs every manifest automatically. No manual `kubectl apply`, on the control pane itself. If something drifts, ArgoCD corrects it.
 
-Secrets are handled per-layer: Kubernetes uses Bitnami Sealed Secrets with encrypted blobs committed to Git — only the cluster can decrypt them. Docker services pull from `.env` files excluded from version control. Terraform loads sensitive variables from git-ignored `.tfvars` files. Nothing sensitive is committed in plaintext.
+Secrets are handled per-layer: Kubernetes uses Bitnami Sealed Secrets with encrypted blobs committed to Git — only the cluster can decrypt them. Docker services pull from `.env` files excluded from version control. Nothing sensitive is committed in plaintext.
 
-Traefik is the ingress controller with cert-manager handling Let's Encrypt certificates via Cloudflare DNS-01 challenges. Every exposed service gets TLS automatically. Velero runs daily cluster backups to a MinIO S3 bucket running in-cluster.
+Traefik is the ingress controller with cert-manager handling Let's Encrypt certificates via Cloudflare DNS-01 challenges. Every exposed service gets TLS automatically. Longhorn is the storage solution for pods and also runs daily cluster backups and snapshots.
 
 ### Security
 
