@@ -1,24 +1,22 @@
 # Homelab Infrastructure
 
-I self host  30+ services across a three-node Kubernetes cluster and a dedicated Docker host, built on four Proxmox hypervisors. The entire Kubernetes stack is GitOps driven via ArgoCD, secured with a full SIEM/SOAR pipeline, and monitored through Prometheus and Grafana. Built as a hands-on complement to my professional work in cloud infrastructure - and to be less dependent on big tech.
+I self host  30+ services across a three node Kubernetes cluster and a dedicated Docker host, built on four Proxmox hypervisors. The entire Kubernetes stack is GitOps driven via ArgoCD, secured with a SIEM/SOAR solution, and monitored through Prometheus and Grafana. I built it as a hands on complement to my professional work in cloud infrastructure - and to be less dependent on big tech.
 
 ## Platform Overview
 
 ### GitOps & Kubernetes
 
-The Kubernetes cluster runs on three nodes, one control plane and two workers - all on Fedora Server VMs. ArgoCD watches a Gitea repo and syncs every manifest automatically. No manual `kubectl apply`, on the control pane itself. If something drifts, ArgoCD corrects it.
+The Kubernetes cluster runs on three nodes, one control plane and two workers - all on Fedora Server VMs. ArgoCD watches a Gitea repo and syncs every manifest automatically.
 
-Secrets are handled per-layer: Kubernetes uses Bitnami Sealed Secrets with encrypted blobs committed to Git — only the cluster can decrypt them. Docker services pull from `.env` files excluded from version control. Nothing sensitive is committed in plaintext.
+Secrets are handled per-layer. Kubernetes uses Sealed Secrets with encrypted blobs committed to Git — only the cluster can decrypt them. Docker services pull from .env files excluded from version control. Nothing sensitive is committed in plaintext.
 
-Traefik is the ingress controller with cert-manager handling Let's Encrypt certificates via Cloudflare DNS-01 challenges. Every exposed service gets TLS automatically. Longhorn is the storage solution for pods and also runs daily cluster backups and snapshots.
+Traefik is the ingress controller with certmanager handling Let's Encrypt certificates via Cloudflare DNS-01 challenges. Every exposed service gets TLS automatically. Longhorn is the storage solution for pods and also runs daily cluster backups and snapshots.
 
 ### Security
 
-**Wazuh** is the backbone of the security stack, serving as both SIEM and SOAR. It collects and correlates logs from every host — authentication events, file integrity changes (via AIDE), and Suricata IDS alerts forwarded from pfSense over syslog. Active response rules automatically block IPs, kill processes, or trigger alerts based on correlation logic.
+**Wazuh** is the backbone of the security stack, serving as both SIEM and SOAR. It collects and correlates logs from every host — authentication events, file integrity changes (via AIDE), etc. Active response rules automatically block IPs, kill processes, or trigger alerts based on correlation logic.
 
-Wazuh also runs SCA modules that continuously scan all hosts against CIS benchmarks, currently scoring 56–78% depending on host role, with ongoing remediation targeting 80%+. The manager runs bare-metal on the control plane node with agents deployed to every host in the fleet.
-
-**Trivy Operator** runs in-cluster as a Helm chart managed by ArgoCD. It continuously scans every container image for vulnerabilities and generates VulnerabilityReport CRDs. A weekly n8n workflow queries these reports and the Docker host's Trivy scans, then pushes a combined summary to ntfy.
+Wazuh also runs SCA modules that continuously scan all hosts against CIS benchmarks, currently scoring 56–78% depending on host role, with ongoing remediation targeting 80%+. The manager runs bare metal on the control plane node with agents deployed to every host in the fleet.
 
 **TruffleHog** runs as a K8s CronJob every Sunday. It pulls a list of all repos from the Gitea API, clones each one, and scans the full git history for leaked secrets. Results go to ntfy.
 
@@ -41,11 +39,11 @@ Traefik on the Kubernetes Cluster acts as the external reverse proxy. Every serv
 ### Infrastructure as Code
 
 
-Ansible handles ongoing state — fleet-wide package updates, kernel hardening enforcement, Docker daemon config, service management, and cleanup jobs. Playbooks also power the n8n workflows (SSH failures, CrowdSec checks, log scanning, Trivy results).
+Ansible handles ongoing state — fleet-wide package updates, kernel hardening enforcement, Docker daemon config, service management, and cleanup jobs. Playbooks also power the n8n workflows (SSH failures, backup status, pod log scanning, etc.).
 
 ### Backup Strategy
 
-Four layers, each covering a different failure scenario: Longhorn snapshots and backups (hourly + daily) for K3s volumes, Kopia for Docker bind mounts to NAS, and Proxmox vzdump for VM-level recovery. Restores have been tested — including full Longhorn cluster recovery and Kopia file-level restores — to verify the chain actually works end to end.
+Four layers, each covering a different failure scenario: Daily Longhorn snapshots and backups for Kubernetes volumes, Kopia for Docker bind mounts to NAS, and Proxmox vzdump for VM-level recovery. Restores have been tested — including full Longhorn cluster recovery and Kopia file-level restores — to verify the chain actually works end to end.
 
 
 ## Repositories
