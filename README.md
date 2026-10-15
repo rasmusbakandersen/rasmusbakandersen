@@ -62,7 +62,7 @@ Four layers, each covering a different failure scenario: Daily Longhorn snapshot
 
 I have an old Nokia E72 from 2008 that I've tried to push to its limit in 2026. It's held back by old protocols and outdated security, but with a few creative workarounds I got email, calendar, contacts and to-do lists working with two-way sync.
 
-It's not something anyone would use in production. I did it to force myself to think outside the box and come up with creative ways to solve novel problems.
+It's not something anyone would use in production - I did it to challenge myself to find creative ways around real technical limits, and to see how far I could get with what I had.
 
 To make it work I run a couple of Docker containers in my homelab that bridge the phone to modern services.
 
