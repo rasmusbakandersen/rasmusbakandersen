@@ -45,6 +45,19 @@ Ansible handles ongoing state — fleet-wide package updates, kernel hardening e
 
 Four layers, each covering a different failure scenario: Daily Longhorn snapshots and backups for Kubernetes volumes, Kopia for Docker bind mounts to NAS, and Proxmox vzdump for VM-level recovery. Restores have been tested — including full Longhorn cluster recovery and Kopia file-level restores — to verify the chain actually works end to end.
 
+
+
+## Repositories
+
+| Repository | What's in it |
+|---|---|
+| **[Kubernetes](https://github.com/rasmusbakandersen/Kubernetes)** | Every K3s manifest — app deployments, ArgoCD applications, Sealed Secrets, Velero/Traefik infra, monitoring stack, Trivy Operator, TruffleHog CronJob. |
+| **[Docker](https://github.com/rasmusbakandersen/Docker)** | Compose stacks for the Docker host — Caddy + Authelia forward auth, CrowdSec, Gitea, Kopia, monitoring agents, Watchtower, and Printarr (a custom print/scan web app I built). |
+| **[Automation](https://github.com/rasmusbakandersen/Automation)** | Ansible playbooks for hardening, updates, log scanning, NUT UPS deployment. Terraform configs for Proxmox VM provisioning. Operational scripts and PowerShell tooling. |
+
+
+
+
 ### Fun Side Project: Nokia E72 from 2008
 
 I have an old Nokia E72 from 2008 that I've tried to push to its limit in 2026. It's held back by old protocols and outdated security, but with a few creative workarounds I got email, calendar, contacts and to-do lists working with two-way sync.
@@ -70,12 +83,3 @@ Changes on the phone show up on the server and the other way around.
 **3. Using email for more**
 
 Since the phone can read email reliably, I use email to deliver other things. For example, an n8n workflow on my K3s cluster sends a plain-text morning briefing every day with weather, calendar, tasks and news headlines.
-
-
-## Repositories
-
-| Repository | What's in it |
-|---|---|
-| **[Kubernetes](https://github.com/rasmusbakandersen/Kubernetes)** | Every K3s manifest — app deployments, ArgoCD applications, Sealed Secrets, Velero/Traefik infra, monitoring stack, Trivy Operator, TruffleHog CronJob. |
-| **[Docker](https://github.com/rasmusbakandersen/Docker)** | Compose stacks for the Docker host — Caddy + Authelia forward auth, CrowdSec, Gitea, Kopia, monitoring agents, Watchtower, and Printarr (a custom print/scan web app I built). |
-| **[Automation](https://github.com/rasmusbakandersen/Automation)** | Ansible playbooks for hardening, updates, log scanning, NUT UPS deployment. Terraform configs for Proxmox VM provisioning. Operational scripts and PowerShell tooling. |
